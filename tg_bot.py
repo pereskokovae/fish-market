@@ -15,6 +15,12 @@ from store_api import (
     add_item_to_cart, get_cart_by_telegram_id,
     remove_item_from_cart, upsert_client_email
     )
+from create_keyboards import (
+    build_products_menu_keyboard,
+    build_product_details_keyboard,
+    build_empty_cart_keyboard,
+    build_cart_keyboard
+    )
 from redis_storage import get_state, get_database_connection, set_state
 
 from dotenv import load_dotenv
@@ -27,23 +33,21 @@ def send_products_menu(bot, chat_id: int, base_url: str, token: str):
     payload = fetch_products(base_url, token)
     items = payload.get("data") or []
 
-    keyboard = []
+    products_for_menu = []
     for item in items:
         product_id = item.get("id")
         title = get_title(item)
 
         if not title or product_id is None:
             continue
+        products_for_menu.append({"id": str(product_id), "title": title})
 
-        keyboard.append(
-            [InlineKeyboardButton(title, callback_data=str(product_id))]
-            )
-    keyboard.append([InlineKeyboardButton("Моя корзина", callback_data="cart")])
+    reply_markup = build_products_menu_keyboard(products_for_menu)
 
     bot.send_message(
         chat_id=chat_id,
         text="Пожалуйста выберите:",
-        reply_markup=InlineKeyboardMarkup(keyboard),
+        reply_markup=reply_markup,
     )
 
 
@@ -63,13 +67,7 @@ def send_product_details(bot, chat_id: int, base_url: str, token: str, product_i
     header = f"{title} ({price} руб.за кг)" if price is not None else title
     text = f"{header}\n\n{description}".strip()
 
-    back_markup = InlineKeyboardMarkup([
-        [InlineKeyboardButton(
-            "Добавить в корзину", callback_data=f"add_to_cart:{product_id}"
-            )],
-        [InlineKeyboardButton("Назад к списку", callback_data="back")],
-        [InlineKeyboardButton("Моя корзина", callback_data="cart")]
-    ])
+    reply_markup = build_product_details_keyboard(product_id)
 
     picture_url = get_picture_url(base_url, item)
 
@@ -81,13 +79,13 @@ def send_product_details(bot, chat_id: int, base_url: str, token: str, product_i
             chat_id=chat_id,
             photo=io.BytesIO(image_response.content),
             caption=text,
-            reply_markup=back_markup
+            reply_markup=reply_markup
         )
     else:
         bot.send_message(
             chat_id=chat_id,
             text=text,
-            reply_markup=back_markup
+            reply_markup=reply_markup
         )
 
 
@@ -194,42 +192,33 @@ def render_cart(bot, chat_id: int, base_url: str, token: str):
         bot.send_message(
             chat_id=chat_id,
             text="Корзина пуста.",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("В меню", callback_data="back_to_menu")]
-            ])
+            reply_markup=build_empty_cart_keyboard()
         )
         return
 
     items = cart["items"]
 
     lines = ["Ваша корзина:\n"]
-    keyboard = []
-
     total = 0
+
     for it in items:
-        product = it["product"]
+        product = it.get("product") or {}
         title = product.get("title", "Без названия")
         price = int(product.get("price") or 0)
         quantity = int(it.get("quantity") or 0)
 
-        total += price * quantity
-        lines.append(f"{title} — {quantity} шт. × {price} = {price*quantity}")
-
-        keyboard.append([
-            InlineKeyboardButton(f"Убрать {title}", callback_data=f"remove:{product['id']}")
-        ])
+        subtotal = price * quantity
+        total += subtotal
+        lines.append(f"{title} — {quantity} шт. × {price} = {subtotal}")
 
     lines.append(f"\nИтого: {total} руб.")
 
-    keyboard.append(
-        [InlineKeyboardButton("В меню", callback_data="back_to_menu")]
-        )
-    keyboard.append([InlineKeyboardButton("Оплатить", callback_data="pay")]) 
+    reply_markup = build_cart_keyboard(items)
 
     bot.send_message(
         chat_id=chat_id,
         text="\n".join(lines),
-        reply_markup=InlineKeyboardMarkup(keyboard)
+        reply_markup=reply_markup
     )
 
 
