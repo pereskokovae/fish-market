@@ -1,6 +1,7 @@
 import os
 import io
 import requests
+import re
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -11,11 +12,15 @@ from telegram.ext import (
 from store_api import (
     fetch_product_by_id, fetch_products, get_title,
     get_description, get_price, get_picture_url,
-    add_item_to_cart, get_cart_by_telegram_id, remove_item_from_cart
+    add_item_to_cart, get_cart_by_telegram_id,
+    remove_item_from_cart, upsert_client_email
     )
 from redis_storage import get_state, get_database_connection, set_state
 
 from dotenv import load_dotenv
+
+
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
 def send_products_menu(bot, chat_id: int, base_url: str, token: str):
@@ -175,6 +180,7 @@ def handle_users_reply(update, context):
         "HANDLE_MENU": handle_menu,
         "HANDLE_DESCRIPTION": handle_description,
         "HANDLE_CART": handle_cart,
+        "WAITING_EMAIL": handle_waiting_email
     }
 
     next_state = states[state](update, context)
@@ -215,7 +221,10 @@ def render_cart(bot, chat_id: int, base_url: str, token: str):
 
     lines.append(f"\nИтого: {total} руб.")
 
-    keyboard.append([InlineKeyboardButton("В меню", callback_data="back_to_menu")])
+    keyboard.append(
+        [InlineKeyboardButton("В меню", callback_data="back_to_menu")]
+        )
+    keyboard.append([InlineKeyboardButton("Оплатить", callback_data="pay")]) 
 
     bot.send_message(
         chat_id=chat_id,
@@ -248,8 +257,41 @@ def handle_cart(update, context):
         render_cart(context.bot, chat_id, base_url, token)
         return "HANDLE_CART"
 
+    if data == "pay":
+        context.bot.send_message(
+            chat_id=chat_id,
+            text="Напишите, пожалуйста, свою почту для оформления заказа"
+        )
+        return "WAITING_EMAIL"
+
     render_cart(context.bot, chat_id, base_url, token)
     return "HANDLE_CART"
+
+
+def handle_waiting_email(update, context):
+    chat_id = update.effective_chat.id
+
+    if not update.message or not update.message.text:
+        context.bot.send_message(chat_id=chat_id, text="Пришлите почту текстом")
+        return "WAITING_EMAIL"
+
+    email = update.message.text.strip()
+
+    if not EMAIL_RE.match(email):
+        context.bot.send_message(
+            chat_id=chat_id,
+            text="Похоже, это не email. Пример: name@gmail.com\nПопробуй ещё раз:"
+        )
+        return "WAITING_EMAIL"
+
+    base_url = context.bot_data["STRAPI_URL"]
+    token = context.bot_data["STRAPI_TOKEN"]
+
+    upsert_client_email(base_url, token, telegram_id=chat_id, email=email)
+
+    context.bot.send_message(chat_id=chat_id, text="Почта сохранена!")
+    send_products_menu(context.bot, chat_id, base_url, token)
+    return "HANDLE_MENU"
 
 
 if __name__ == "__main__":

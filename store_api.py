@@ -124,12 +124,62 @@ def remove_item_from_cart(base_url: str, token: str, telegram_id: int, product_i
         return None
 
     cart_doc_id = cart["documentId"]
-    items = cart.get("items") or []
 
-    new_items = [it for it in items if int(it["product"]["id"]) != int(product_id)]
+    raw_items = cart.get("items")
+    if raw_items is None:
+        raw_items = (cart.get("attributes") or {}).get("items") or []
+    else:
+        raw_items = raw_items or []
 
+    new_items = []
+    for it in raw_items:
+        pid = it.get("product")
+
+        if isinstance(pid, dict):
+            pid = pid.get("id") or (pid.get("data") or {}).get("id")
+
+        if int(pid) != int(product_id):
+            new_items.append({
+                "product": int(pid),           
+                "quantity": int(it.get("quantity") or 0),
+            })
     url = f"{base_url.rstrip('/')}/api/carts/{cart_doc_id}"
     payload = {"data": {"items": new_items}}
     response = requests.put(url, headers=_headers(token), json=payload, timeout=15)
     response.raise_for_status()
     return response.json()
+
+
+def get_client_by_telegram_id(base_url: str, token: str, telegram_id: int):
+    url = f"{base_url.rstrip('/')}/api/clients"
+    params = {"filters[telegram_id][$eq]": str(telegram_id)}
+    r = requests.get(url, headers=_headers(token), params=params, timeout=15)
+    r.raise_for_status()
+    data = r.json().get("data") or []
+    return data[0] if data else None
+
+
+def create_client(base_url: str, token: str, telegram_id: int, email: str):
+    url = f"{base_url.rstrip('/')}/api/clients"
+    payload = {"data": {"telegram_id": str(telegram_id), "email": email}}
+    r = requests.post(url, headers=_headers(token), json=payload, timeout=15)
+    r.raise_for_status()
+    return r.json()["data"]
+
+
+def upsert_client_email(base_url: str, token: str, telegram_id: int, email: str):
+    client = get_client_by_telegram_id(base_url, token, telegram_id)
+    if not client:
+        return create_client(base_url, token, telegram_id, email)
+
+    doc_id = client.get("documentId")
+    if not doc_id:
+        client_id = client["id"]
+        url = f"{base_url.rstrip('/')}/api/clients/{client_id}"
+    else:
+        url = f"{base_url.rstrip('/')}/api/clients/{doc_id}"
+
+    payload = {"data": {"email": email}}
+    r = requests.put(url, headers=_headers(token), json=payload, timeout=15)
+    r.raise_for_status()
+    return r.json()["data"]
