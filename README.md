@@ -16,7 +16,7 @@
 ## Установка проекта
 1) Клонировать репозиторий
 ```bash
-git clone 
+git clone https://github.com/pereskokovae/fish-market.git
 cd fish-market
 ```
 2) Виртуальное окружение и зависимости
@@ -44,12 +44,25 @@ DATABASE_PASSWORD=
 
 ### Где получить STRAPI_TOKEN
  1. Откройте Strapi Admin: http://localhost:1337/admin
- 2. Settings → API Tokens
+ 2. Settings -> API Tokens
  3. Create new API Token
  4. Скопируйте токен и вставь в .env как STRAPI_TOKEN=...
 
-## Запуск
+## Как получить токен Telegram-бота (TG_TOKEN)
+1. Откройте Telegram и найдите бота @BotFather.
+2. Напишите команду /start.
+3. Создайте нового бота командой /newbot.
+4. BotFather попросит:
+   - имя бота
+   - username бота 
+5. В ответ BotFather пришлёт токен вида:
+   1234567890:AA...
+Сохраните токен в .env:
+```env
+TG_TOKEN=1234567890:AA...
+```
 
+## Запуск
 1. Redis
 Убедитесь, что Redis запущен:
 ```bash
@@ -68,7 +81,7 @@ npm run develop
 python tg_bot.py
 ```
 
-Проверка, что всё работает
+### Проверка, что всё работает
  1. Открой бота в Telegram → /start
  2. Должно быть:
  - список товаров (кнопки)
