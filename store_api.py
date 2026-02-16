@@ -74,8 +74,8 @@ def get_cart_by_telegram_id(base_url: str, token: str, telegram_id: int):
     }
     response = requests.get(url, headers=_headers(token), params=params, timeout=15)
     response.raise_for_status()
-    data = response.json().get("data") or []
-    return data[0] if data else None
+    clients = response.json().get("data") or []
+    return clients[0] if clients else None
 
 
 def add_item_to_cart(base_url: str, token: str, telegram_id: int, product_id: int, quantity: int = 1):
@@ -140,7 +140,7 @@ def remove_item_from_cart(base_url: str, token: str, telegram_id: int, product_i
 
         if int(pid) != int(product_id):
             new_items.append({
-                "product": int(pid),           
+                "product": int(pid),        
                 "quantity": int(it.get("quantity") or 0),
             })
     url = f"{base_url.rstrip('/')}/api/carts/{cart_doc_id}"

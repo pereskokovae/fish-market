@@ -228,24 +228,23 @@ def handle_cart(update, context):
     base_url = context.bot_data["STRAPI_URL"]
     token = context.bot_data["STRAPI_TOKEN"]
     chat_id = query.message.chat_id
-    data = query.data
 
     try:
         query.message.delete()
     except Exception:
         pass
 
-    if data == "back_to_menu":
+    if query.data == "back_to_menu":
         send_products_menu(context.bot, chat_id, base_url, token)
         return "HANDLE_MENU"
 
-    if data.startswith("remove:"):
-        product_id = int(data.split(":", 1)[1])
+    if query.data.startswith("remove:"):
+        product_id = int(query.data.split(":", 1)[1])
         remove_item_from_cart(base_url, token, chat_id, product_id)
         render_cart(context.bot, chat_id, base_url, token)
         return "HANDLE_CART"
 
-    if data == "pay":
+    if query.data == "pay":
         context.bot.send_message(
             chat_id=chat_id,
             text="Напишите, пожалуйста, свою почту для оформления заказа"
