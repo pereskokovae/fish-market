@@ -153,18 +153,18 @@ def remove_item_from_cart(base_url: str, token: str, telegram_id: int, product_i
 def get_client_by_telegram_id(base_url: str, token: str, telegram_id: int):
     url = f"{base_url.rstrip('/')}/api/clients"
     params = {"filters[telegram_id][$eq]": str(telegram_id)}
-    r = requests.get(url, headers=_headers(token), params=params, timeout=15)
-    r.raise_for_status()
-    data = r.json().get("data") or []
+    response = requests.get(url, headers=_headers(token), params=params, timeout=15)
+    response.raise_for_status()
+    data = response.json().get("data") or []
     return data[0] if data else None
 
 
 def create_client(base_url: str, token: str, telegram_id: int, email: str):
     url = f"{base_url.rstrip('/')}/api/clients"
     payload = {"data": {"telegram_id": str(telegram_id), "email": email}}
-    r = requests.post(url, headers=_headers(token), json=payload, timeout=15)
-    r.raise_for_status()
-    return r.json()["data"]
+    response = requests.post(url, headers=_headers(token), json=payload, timeout=15)
+    response.raise_for_status()
+    return response.json()["data"]
 
 
 def upsert_client_email(base_url: str, token: str, telegram_id: int, email: str):
@@ -180,6 +180,6 @@ def upsert_client_email(base_url: str, token: str, telegram_id: int, email: str)
         url = f"{base_url.rstrip('/')}/api/clients/{doc_id}"
 
     payload = {"data": {"email": email}}
-    r = requests.put(url, headers=_headers(token), json=payload, timeout=15)
-    r.raise_for_status()
-    return r.json()["data"]
+    response = requests.put(url, headers=_headers(token), json=payload, timeout=15)
+    response.raise_for_status()
+    return response.json()["data"]

@@ -1,7 +1,7 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 
-def build_products_menu_keyboard(products_for_menu: list) -> InlineKeyboardMarkup:
+def build_products_menu_keyboard(products_for_menu: list):
     keyboard = []
     for product in products_for_menu:
         keyboard.append([InlineKeyboardButton(product["title"], callback_data=product["id"])])
