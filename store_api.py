@@ -74,8 +74,8 @@ def get_cart_by_telegram_id(base_url: str, token: str, telegram_id: int):
     }
     response = requests.get(url, headers=_headers(token), params=params, timeout=15)
     response.raise_for_status()
-    clients = response.json().get("data") or []
-    return clients[0] if clients else None
+    cart_records = response.json().get("data") or []
+    return cart_records[0] if cart_records else None
 
 
 def add_item_to_cart(base_url: str, token: str, telegram_id: int, product_id: int, quantity: int = 1):
@@ -155,8 +155,8 @@ def get_client_by_telegram_id(base_url: str, token: str, telegram_id: int):
     params = {"filters[telegram_id][$eq]": str(telegram_id)}
     response = requests.get(url, headers=_headers(token), params=params, timeout=15)
     response.raise_for_status()
-    data = response.json().get("data") or []
-    return data[0] if data else None
+    client_records = response.json().get("data") or []
+    return client_records[0] if client_records else None
 
 
 def create_client(base_url: str, token: str, telegram_id: int, email: str):
