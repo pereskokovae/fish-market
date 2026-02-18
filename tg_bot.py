@@ -284,9 +284,9 @@ def handle_waiting_email(update, context):
 if __name__ == "__main__":
     load_dotenv()
 
-    tg_token = os.getenv("TG_TOKEN")
+    tg_token = os.environ["TG_TOKEN"]
     strapi_url = os.getenv("STRAPI_URL", default="http://localhost:1337")
-    strapi_token = os.getenv("STRAPI_TOKEN")
+    strapi_token = os.environ["STRAPI_TOKEN"]
 
     updater = Updater(tg_token)
     dp = updater.dispatcher
